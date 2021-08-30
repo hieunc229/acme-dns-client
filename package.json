@@ -1,0 +1,25 @@
+{
+  "name": "acme-dns-client",
+  "version": "0.0.1",
+  "description": "Automate creating DNS record for acme-middleware",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hieunc229/acme-dns-client.git"
+  },
+  "keywords": [
+    "dns",
+    "acme",
+    "node",
+    "express"
+  ],
+  "author": "Hieu C. Nguyen",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/hieunc229/acme-dns-client/issues"
+  },
+  "homepage": "https://github.com/hieunc229/acme-dns-client#readme"
+}
