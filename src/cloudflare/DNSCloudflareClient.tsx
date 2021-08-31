@@ -21,6 +21,10 @@ export default class DNSCloudflareClient extends AcmeDNSClientAbstract {
         return process.env[`ACME_EXPRESS_CLOUDFLARE_ZONE_ID_${domain}`] || process.env.ACME_EXPRESS_CLOUDFLARE_ZONE_ID
     }
 
+    private handleCreateOutput = (input: any) =>{
+        return input.result;
+    }
+
     createRecord<T = CreateDNSRecordResponse>(options: {
         name: string,
         type: "TXT" | "A" | "CNAME",
@@ -40,7 +44,7 @@ export default class DNSCloudflareClient extends AcmeDNSClientAbstract {
         let zoneId = this.getZoneId(options.domain);
 
         return this.r<T>(`zones/${zoneId}/dns_records`,
-            { domain: options.domain },
+            { domain: options.domain, handleOutput: this.handleCreateOutput },
             { method: 'POST', data }
         )
     }
@@ -55,21 +59,38 @@ export default class DNSCloudflareClient extends AcmeDNSClientAbstract {
         )
     }
 
-    private r<T = any>(path: string, options: { domain: string }, init?: { method: string, data?: any, headers?: HeaderInit }): Promise<T> {
+    private r<T = any>(path: string, options: { domain: string, handleOutput?: (input: any) => any }, init?: { method: string, data?: any, headers?: HeaderInit }): Promise<T> {
 
         const { data, method = "GET" } = init || {};
+        const { handleOutput, domain } = options;
+        const token = this.getToken(domain);
+        const url = `https://api.cloudflare.com/client/v4/${path}`;
 
         return new Promise((resolve, reject) => {
-            fetch(`https://api.cloudflare.com/client/v4/${path}`, {
+
+            function handleResolve(res: CloudflareResponse) {
+
+                if (!res.success) {
+                    reject((res.error || res.messages || ["failed"]).join(". "))
+                }
+
+                let output: any = res;
+                if (handleOutput) {
+                    output = handleOutput(res)
+                }
+                resolve(output);
+            }
+
+            fetch(url, {
                 method,
                 body: data ? JSON.stringify(data) : "",
                 headers: {
                     ...init?.headers,
-                    "Authorization": `Bearer ${this.getToken(options.domain)}`
+                    "Authorization": `Bearer ${token}`
                 }
             })
                 .then(rs => rs.json())
-                .then(resolve)
+                .then(handleResolve)
                 .catch(reject)
         })
 
@@ -79,6 +100,13 @@ export default class DNSCloudflareClient extends AcmeDNSClientAbstract {
 
 type DeleteDNSRecordResponse = {
     result: { id: string }
+}
+
+type CloudflareResponse = {
+    result: any,
+    success: boolean,
+    error: { code: number, message: string}[],
+    "messages": any[],
 }
 
 type CreateDNSRecordResponse = {
