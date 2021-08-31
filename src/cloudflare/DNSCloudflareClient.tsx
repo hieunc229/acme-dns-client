@@ -1,39 +1,61 @@
-import AcmeDNSClientAbstract from "../AcmeDNSClientAbstract";
+
 
 import fetch, { HeaderInit } from "node-fetch"
+import { AcmeDNSClientAbstract } from "../AcmeDNSClientAbstract"
 
 
 export default class DNSCloudflareClient extends AcmeDNSClientAbstract {
 
-    //https://github.com/cloudflare/node-cloudflare
+    /**
+     * Get Cloudflare token.
+     * To generate a token, login to Cloudflare Dashboard, navigate to "My profile -> API Token"
+     * @param domain 
+     * @returns 
+     */
     // Get token from "My profile -> API Token"
-    private token = process.env.ACME_EXPRESS_CLOUDFLARE_TOKEN || ""
+    private getToken = (domain: string) => {
+        return process.env[`ACME_EXPRESS_CLOUDFLARE_TOKEN_${domain}`] || process.env.ACME_EXPRESS_CLOUDFLARE_TOKEN
+    }
 
-    //I t’s in the Overview tab for that domain. Right hand column in the API section. Scroll down a bit.
-    private zoneId = process.env.ACME_EXPRESS_CLOUDFLARE_ZONE_ID || ""
+    private getZoneId = (domain: string) => {
+        return process.env[`ACME_EXPRESS_CLOUDFLARE_ZONE_ID_${domain}`] || process.env.ACME_EXPRESS_CLOUDFLARE_ZONE_ID
+    }
 
-    createRecord<T = CreateDNSRecordResponse>(name: string, type: "TXT" | "A" | "CNAME", value: string, ttl?: number): Promise<T> {
+    createRecord<T = CreateDNSRecordResponse>(options: {
+        name: string,
+        type: "TXT" | "A" | "CNAME",
+        value: string,
+        domain: string,
+        challenge: any,
+        [prop: string]: any
+    }): Promise<T> {
+
+        let { type, name, value, ttl = 1 } = options;
 
         const data = {
-            type,
-            name,
-            content: value,
-            ttl: ttl || 1 // 1 is "auto"
+            type, name, ttl,
+            content: value
         }
 
-        return this.r<T>(`zones/${this.zoneId}/dns_records`, {
-            method: 'POST',
-            data
-        })
+        let zoneId = this.getZoneId(options.domain);
+
+        return this.r<T>(`zones/${zoneId}/dns_records`,
+            { domain: options.domain },
+            { method: 'POST', data }
+        )
     }
 
-    removeRecord<T = DeleteDNSRecordResponse>(dnsId: any): Promise<T> {
-        return this.r<T>(`zones/${this.zoneId}/dns_records/${dnsId}`, {
-            method: 'DELETE'
-        })
+    removeRecord<T = DeleteDNSRecordResponse>(options: { domain: string, dnsRecord: any }): Promise<T> {
+
+        let zoneId = this.getZoneId(options.domain);
+
+        return this.r<T>(`zones/${zoneId}/dns_records/${options.dnsRecord.id}`,
+            { domain: options.domain },
+            { method: 'DELETE' }
+        )
     }
 
-    private r<T = any>(path: string, init?: { method: string, data?: any, headers?: HeaderInit }): Promise<T> {
+    private r<T = any>(path: string, options: { domain: string }, init?: { method: string, data?: any, headers?: HeaderInit }): Promise<T> {
 
         const { data, method = "GET" } = init || {};
 
@@ -43,7 +65,7 @@ export default class DNSCloudflareClient extends AcmeDNSClientAbstract {
                 body: data ? JSON.stringify(data) : "",
                 headers: {
                     ...init?.headers,
-                    "Authorization": `Bearer ${this.token}`
+                    "Authorization": `Bearer ${this.getToken(options.domain)}`
                 }
             })
                 .then(rs => rs.json())
