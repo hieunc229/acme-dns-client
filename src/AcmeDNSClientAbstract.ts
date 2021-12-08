@@ -6,8 +6,9 @@ export abstract class AcmeDNSClientAbstract {
         value: string,
         domain: string,
         challenge: any,
+        token: string,
         [prop: string]: any
     }): Promise<T>
 
-    abstract removeRecord<T = any>(options: { domain: string, dnsRecord: any }): Promise<T>
+    abstract removeRecord<T = any>(options: { domain: string, dnsRecord: any, token: string }): Promise<T>
 }

@@ -31,6 +31,7 @@ export default class DNSCloudflareClient extends AcmeDNSClientAbstract {
         value: string,
         domain: string,
         challenge: any,
+        token: string,
         [prop: string]: any
     }): Promise<T> {
 
@@ -49,7 +50,7 @@ export default class DNSCloudflareClient extends AcmeDNSClientAbstract {
         )
     }
 
-    removeRecord<T = DeleteDNSRecordResponse>(options: { domain: string, dnsRecord: any }): Promise<T> {
+    removeRecord<T = DeleteDNSRecordResponse>(options: { domain: string, dnsRecord: any, token: string }): Promise<T> {
 
         let zoneId = this.getZoneId(options.domain);
 
